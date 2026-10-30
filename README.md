@@ -1,55 +1,47 @@
-# CampusAble Building Accessibility
+# CampusAble Fairfax Campus
 
-IT 390 Week 5 project by Sufyan Zelawar.
+IT 390 project by Sufyan Zelawar.
 
-This Angular application uses a master-detail interface. The building list is the master view. Selecting a building updates its entrance, elevator, restroom, and access notice in the detail view without leaving the page. All entries are fictional sample data and must not be used for real campus travel.
+The Angular page lists Innovation Hall, the Johnson Center (JC), Horizon Hall, and Fenwick Library. Selecting a building updates its description, useful features, official information link, and embedded Google Maps location.
 
 ## Run locally
-
-Open Terminal in the project folder, then run:
 
 ```bash
 npm install
 npm start
 ```
 
-Open http://localhost:4200 in your browser. Keep Terminal running while using the app. Press Control+C in Terminal to stop it. After the first installation, only `npm start` is needed. Use Node 26 or another Node version supported by Angular 22.
-
-Do not open src/index.html directly. Angular needs the development server to compile the TypeScript.
+Open http://localhost:4200 and keep Terminal running. After the first installation, only `npm start` is needed. Stop the server with Control+C. Use a Node version supported by Angular 22. Do not open src/index.html directly; Angular needs the server to compile the TypeScript.
 
 ## Main files
 
-- `src/app/app.component.ts`: building data, selection method, and HTML template. This is the main component for the portfolio attachment.
-- `src/styles.css`: basic colors and responsive layout.
+- `src/app/app.component.ts`: building records, HTML template, selection logic, and Google Maps embeds.
+- `src/styles.css`: simple blue theme and layout for desktop and mobile.
 - `src/main.ts`: starts the Angular application.
 
-`selectedBuilding` stores the current selection as an Angular signal. The `@for` block creates a button for each building. A button click calls `selectBuilding`, and Angular updates the details automatically.
+The `selectedBuilding` signal stores the selected record. The computed `mapSource` changes the iframe URL when the selection changes. Embed URLs come from Google Maps' Share > Embed a map feature. This version needs internet access for the maps but does not use an API key. An external Google Maps link remains available if an embed does not load.
 
-## Build
+## Information sources
+
+Building descriptions were checked on October 30, 2026:
+
+- Innovation Hall: [Mason ITS computer labs](https://its.gmu.edu/help-support/computer-labs-classrooms-information/) and [Mason learning spaces](https://learningenvironments.gmu.edu/signature-learning-spaces/).
+- Johnson Center: [Mason Student Centers](https://studentcenters.gmu.edu/the-johnson-center/).
+- Horizon Hall: [Mason Learning Environments](https://learningenvironments.gmu.edu/signature-learning-spaces/).
+- Fenwick Library: [Mason University Libraries](https://library.gmu.edu/locations/fenwick).
+
+These sources describe the buildings. They do not verify accessible travel routes. Entrance, elevator, and accessible restroom details remain unverified. The old fictional closure notices were removed. Backend routing, live closures, and administrator updates are not implemented.
+
+## Build and check
 
 ```bash
 npm run build
 ```
 
-## Interface checks
+1. Innovation Hall is selected initially.
+2. Select each of the four buildings. Confirm that its heading, description, source link, map heading, and map location change together.
+3. Select buildings using Tab and Enter.
+4. Check the layout on a narrow screen; the details should appear below the list.
+5. Confirm that the Google Maps and Mason source links open the selected building's information.
 
-1. The Library is selected when the page opens.
-2. Select each of the five buildings and check that all details change.
-3. Science Hall shows a sample elevator outage; Administration shows a sample entrance closure.
-4. Return to the Library and check that the closure notice is replaced by its access note.
-5. Use Tab and Enter to select a building with the keyboard.
-6. On a narrow screen, the details appear below the building list.
-
-## Portfolio description
-
-CampusAble Building Accessibility helps students look up accessibility information for campus buildings. The left side shows a list of buildings. When someone clicks a building, the right side shows its accessible entrance, elevator information, restroom location, and any access notice. The details change on the same page, so users can check different buildings without opening a new page each time. This version uses sample information to demonstrate how the interface works.
-
-## Submission checklist
-
-- Review the code and test the interface.
-- Capture a screenshot of the running application.
-- Attach `src/app/app.component.ts` as the main component file.
-- Upload the project source and package-lock.json to your GitHub repository, then include its link in the portfolio. Do not upload node_modules, dist, or .angular.
-- Complete the assigned Angular training and include the actual completion certificate.
-
-This project uses Angular 22 standalone components. Its setup differs from the older Angular tutorial, but it implements the same list-selection and detail-display pattern.
+Keep node_modules, dist, .angular, and .DS_Store out of the source submission.
