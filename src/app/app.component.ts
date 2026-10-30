@@ -58,7 +58,6 @@ interface Building {
         </div>
         <iframe [src]="mapSource()" [title]="'Google Maps location of ' + selectedBuilding().name"
           width="960" height="340" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-        <p class="map-note">Map requires an internet connection. If it does not load, use the link above. Locations are shown for reference; accessible routes have not been verified.</p>
       </section>
     </main>
     <footer>CampusAble | IT 390 | Sufyan Zelawar</footer>
