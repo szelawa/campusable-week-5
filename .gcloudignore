@@ -1,0 +1,8 @@
+.git
+node_modules
+.env
+.data
+.gitignore
+.github
+screenshots
+tests

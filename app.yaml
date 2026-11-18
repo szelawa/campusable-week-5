@@ -1,0 +1,9 @@
+runtime: nodejs24
+service: campusable
+instance_class: F1
+automatic_scaling:
+  min_instances: 0
+  max_instances: 1
+env_variables:
+  STORAGE: firestore
+  # Add GOOGLE_CLIENT_ID and ADMIN_EMAILS before deployment.

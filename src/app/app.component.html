@@ -1,0 +1,786 @@
+<a class="skip-link" href="#main-content">Skip to main content</a>
+<div class="app-shell">
+  @if (mobileMenu()) {
+    <button
+      class="sidebar-backdrop"
+      aria-label="Close navigation"
+      (click)="mobileMenu.set(false)"
+    ></button>
+  }
+  <aside
+    class="sidebar"
+    [class.mobile-open]="mobileMenu()"
+    aria-label="Main navigation"
+  >
+    <a
+      class="brand"
+      href="#"
+      (click)="$event.preventDefault(); navigate('explore')"
+      aria-label="CampusAble home"
+      ><span class="brand-mark"><app-icon name="compass" /></span
+      ><span
+        >Campus<span class="brand-light">Able</span
+        ><small>EVERY PATH. EVERY PERSON.</small></span
+      ></a
+    >
+    <div class="workspace-label">YOUR CAMPUS COMPANION</div>
+    <nav class="main-nav">
+      <button
+        [class.active]="activeView() === 'explore'"
+        [attr.aria-current]="activeView() === 'explore' ? 'page' : null"
+        (click)="navigate('explore')"
+      >
+        <app-icon name="map" /> Explore campus <span class="nav-dot"></span>
+      </button>
+      <button
+        [class.active]="activeView() === 'saved'"
+        [attr.aria-current]="activeView() === 'saved' ? 'page' : null"
+        (click)="navigate('saved')"
+      >
+        <app-icon name="bookmark" /> Saved places
+        <span class="nav-count">{{ savedIds().length }}</span>
+      </button>
+      <button
+        [class.active]="activeView() === 'accessibility'"
+        [attr.aria-current]="activeView() === 'accessibility' ? 'page' : null"
+        (click)="navigate('accessibility')"
+      >
+        <app-icon name="access" /> Accessibility
+      </button>
+      <button
+        [class.active]="activeView() === 'resources'"
+        [attr.aria-current]="activeView() === 'resources' ? 'page' : null"
+        (click)="navigate('resources')"
+      >
+        <app-icon name="book" /> Campus resources
+      </button>
+    </nav>
+    <div class="sidebar-note">
+      <span class="note-icon"><app-icon name="heart" /></span>
+      <h3>A little support.<br />A lot of possibility.</h3>
+      <p>Find the people and resources that help you feel at home.</p>
+      <button class="text-button" (click)="navigate('resources')">
+        Find support <app-icon name="arrow" />
+      </button>
+    </div>
+    <div class="sidebar-bottom">
+      <strong>George Mason University</strong>
+  <small>An independent student project</small>
+  </div>
+  </aside>
+  <div class="main-shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button
+          class="icon-button mobile-menu-button"
+          aria-label="Open navigation"
+          [attr.aria-expanded]="mobileMenu()"
+          (click)="mobileMenu.set(!mobileMenu())"
+        >
+          <app-icon name="menu" /></button
+        ><span class="breadcrumb"
+          >CampusAble <app-icon name="chevron" />
+          <strong>{{
+            activeView() === "explore"
+              ? "Explore campus"
+              : activeView() === "saved"
+                ? "Saved places"
+                : activeView() === "accessibility"
+                  ? "Accessibility"
+                  : "Campus resources"
+          }}</strong></span
+        >
+      </div>
+      <div class="topbar-actions">
+        <span class="campus-selector"
+          ><app-icon name="pin" /><label class="sr-only" for="campus-select"
+            >Choose campus</label
+          ><select
+            id="campus-select"
+            [value]="campusId()"
+            (change)="changeCampus($any($event.target).value)"
+          >
+            @for (item of campuses; track item.id) {
+              <option [value]="item.id">
+                {{ item.name
+                }}{{
+                  item.id === "fairfax"
+                    ? " campus"
+                    : item.id === "arlington"
+                      ? " · Mason Square"
+                      : " · SciTech"
+                }}
+              </option>
+            }</select
+          ><app-icon name="down" /></span
+        ><span class="topbar-divider"></span
+        ><button
+          class="icon-button settings-button"
+          aria-label="Display and accessibility settings"
+          (click)="navigate('accessibility')"
+        >
+          <app-icon name="sliders" />
+        </button>
+      </div>
+    </header>
+    <main id="main-content" tabindex="-1">
+      <section
+        [hidden]="activeView() !== 'explore' && activeView() !== 'saved'"
+        aria-labelledby="explore-heading"
+      >
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow"><span></span> {{ campus().location }}</div>
+            <h1 id="explore-heading">
+              {{
+                activeView() === "saved"
+                  ? "Your places, one tap away."
+                  : "Your campus. Your way."
+              }}
+            </h1>
+            <p>
+              {{
+                activeView() === "saved"
+                  ? "The places you want to come back to, saved on this device."
+                  : "A little less searching. A little more belonging."
+              }}
+            </p>
+          </div>
+          <a
+            class="outline-button official-map-link"
+            href="https://www.gmu.edu/campus-maps"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><app-icon name="map" /> Official campus maps
+            <app-icon name="external"
+          /></a>
+        </div>
+        <div class="explorer-toolbar">
+          <div class="search-field">
+            <app-icon name="search" /><label class="sr-only" for="place-search"
+              >Search campus buildings and spaces</label
+            ><input
+              id="place-search"
+              type="search"
+              [value]="query()"
+              (input)="search($any($event.target).value)"
+              placeholder="Where would you like to go?"
+              autocomplete="off"
+            /><span class="search-hint">Search your campus</span>
+          </div>
+          <button
+            class="preferences-button"
+            aria-label="Display preferences"
+            (click)="navigate('accessibility')"
+          >
+            <app-icon name="sliders" /> <span>Display preferences</span>
+          </button>
+        </div>
+        <div class="filter-row">
+          <div class="filter-chips" aria-label="Filter places by type">
+            @for (item of categories; track item) {
+              <button
+                [class.selected]="category() === item"
+                [attr.aria-pressed]="category() === item"
+                (click)="setCategory(item)"
+              >
+                <app-icon
+                  [name]="item === 'All places' ? 'layers' : categoryIcon(item)"
+                />{{ item }}
+              </button>
+            }
+          </div>
+          <div class="view-switch" aria-label="View mode">
+            <button
+              [class.selected]="!listView()"
+              [attr.aria-pressed]="!listView()"
+              (click)="setListView(false)"
+            >
+              <app-icon name="map" /> Map</button
+            ><button
+              [class.selected]="listView()"
+              [attr.aria-pressed]="listView()"
+              (click)="setListView(true)"
+            >
+              <app-icon name="list" /> List
+            </button>
+          </div>
+        </div>
+        <div class="explorer" [class.list-only]="listView()">
+          <section class="places-panel" aria-labelledby="places-heading">
+            <div class="places-panel-heading">
+              <h2 id="places-heading">
+                {{
+                  activeView() === "saved"
+                    ? "Saved on this campus"
+                    : "Discover your campus"
+                }}
+              </h2>
+              <span class="result-count" aria-live="polite"
+                >{{ filteredBuildings().length }}
+                {{
+                  filteredBuildings().length === 1 ? "place" : "places"
+                }}</span
+              >
+            </div>
+            <div class="places-list">
+              @for (place of filteredBuildings(); track place.id) {
+                <article
+                  class="place-card"
+                  [class.selected]="selectedBuilding()?.id === place.id"
+                >
+                  <div class="place-card-top">
+                    <span
+                      class="place-icon"
+                      [class.library-icon]="place.category === 'Libraries'"
+                      [class.life-icon]="place.category === 'Student life'"
+                      ><app-icon [name]="categoryIcon(place.category)" /></span
+                    ><span class="place-category">{{ place.category }}</span
+                    ><button
+                      class="save-button"
+                      [class.is-saved]="isSaved(place)"
+                      [attr.aria-label]="
+                        (isSaved(place) ? 'Unsave ' : 'Save ') + place.name
+                      "
+                      [attr.aria-pressed]="isSaved(place)"
+                      (click)="toggleSaved(place)"
+                    >
+                      <app-icon name="bookmark" />
+                    </button>
+                  </div>
+                  <button
+                    class="place-select"
+                    (click)="selectBuilding(place)"
+                    [attr.aria-pressed]="selectedBuilding()?.id === place.id"
+                    aria-controls="map-panel"
+                  >
+                    <h3>{{ place.name }}</h3>
+                    <span>{{ place.tags.join(" · ") }}</span>
+                  </button>
+                  <div class="place-card-bottom">
+                    <span
+                      ><span class="status-dot"></span> Access details
+                      unverified</span
+                    ><button
+                      class="details-link"
+                      (click)="openDetails(place)"
+                      [attr.aria-label]="'View details for ' + place.name"
+                    >
+                      <app-icon name="arrow" />
+                    </button>
+                  </div>
+                </article>
+              } @empty {
+                <div class="empty-state">
+                  <span class="empty-icon"
+                    ><app-icon
+                      [name]="
+                        activeView() === 'saved' && !query()
+                          ? 'bookmark'
+                          : 'search'
+                      "
+                  /></span>
+                  <h3>
+                    {{
+                      activeView() === "saved" && !query()
+                        ? "Make yourself at home"
+                        : "No places found"
+                    }}
+                  </h3>
+                  <p>
+                    {{
+                      activeView() === "saved" && !query()
+                        ? "Save a place using its bookmark. Saved places are grouped by campus."
+                        : "Try a building name, a shorter search, or a different category."
+                    }}
+                  </p>
+                  <button
+                    class="outline-button"
+                    (click)="
+                      activeView() === 'saved'
+                        ? navigate('explore')
+                        : clearFilters()
+                    "
+                  >
+                    {{
+                      activeView() === "saved"
+                        ? "Explore places"
+                        : "Clear filters"
+                    }}
+                  </button>
+                </div>
+              }
+            </div>
+            <div class="places-panel-footer">
+              <app-icon name="info" /><span
+                >More places, one campus at a time.</span
+              >
+            </div>
+          </section>
+          <section
+            id="map-panel"
+            class="map-panel"
+            aria-label="Interactive campus map"
+            [hidden]="listView()"
+          >
+            <div
+              #mapElement
+              class="campus-map"
+              aria-label="Campus map. Use the building list for a keyboard-accessible alternative."
+            ></div>
+            <div class="map-title">
+              <span class="live-dot"></span><span>{{ campus().label }}</span>
+            </div>
+            <div class="map-controls">
+              <button aria-label="Zoom in" (click)="zoom(1)">
+                <app-icon name="plus" /></button
+              ><button aria-label="Zoom out" (click)="zoom(-1)">
+                <app-icon name="minus" /></button
+              ><span></span
+              ><button
+                aria-label="Reset map to campus"
+                title="Reset campus view"
+                (click)="resetMap()"
+              >
+                <app-icon name="compass" /></button
+              ><button
+                [disabled]="locating()"
+                aria-label="Find my location"
+                title="Find my location"
+                (click)="locate()"
+              >
+                <app-icon name="locate" />
+              </button>
+            </div>
+            <span class="map-north" aria-hidden="true"><span>↑</span>N</span>
+            @if (tileError()) {
+              <div class="map-error" role="status">
+                <app-icon name="info" /><span
+                  >The map couldn’t load. You can still explore the building
+                  list.</span
+                ><button (click)="retryMap()">Retry</button>
+              </div>
+            }
+            @if (selectedBuilding(); as selected) {
+              <div class="map-place-summary">
+                <div class="summary-top">
+                  <span class="place-icon"
+                    ><app-icon [name]="categoryIcon(selected.category)"
+                  /></span>
+                  <div>
+                    <span class="eyebrow">YOUR SELECTED PLACE</span>
+                    <h3>{{ selected.name }}</h3>
+                  </div>
+                  <button
+                    class="save-button"
+                    [class.is-saved]="isSaved(selected)"
+                    [attr.aria-label]="
+                      (isSaved(selected) ? 'Unsave ' : 'Save ') + selected.name
+                    "
+                    [attr.aria-pressed]="isSaved(selected)"
+                    (click)="toggleSaved(selected)"
+                  >
+                    <app-icon name="bookmark" />
+                  </button>
+                </div>
+                <div class="summary-bottom">
+                  <button
+                    class="summary-details"
+                    (click)="openDetails(selected)"
+                  >
+                    Building details <app-icon name="chevron" /></button
+                  ><button
+                    class="primary-button"
+                    (click)="openDirections(selected)"
+                  >
+                    <app-icon name="directions" /> Directions
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
+        </div>
+        <div class="access-note">
+          <span class="access-note-icon"><app-icon name="shield" /></span>
+          <div>
+            <strong>A little planning goes a long way.</strong>
+            <p>
+              Entrances, elevators, and step-free routes aren’t verified here.
+              Check Mason’s access resources before your visit.
+            </p>
+          </div>
+          <a
+            href="https://accessibility.gmu.edu/campus-access/accessible-travel-routes-resources/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Access resources <app-icon name="arrow"
+          /></a>
+        </div>
+      </section>
+      <section
+        class="settings-page"
+        [hidden]="activeView() !== 'accessibility'"
+        aria-labelledby="accessibility-heading"
+      >
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow"><span></span> MADE TO FEEL LIKE YOU</div>
+            <h1 id="accessibility-heading">A more comfortable experience.</h1>
+            <p>Small changes that make CampusAble easier to use.</p>
+          </div>
+        </div>
+        <div class="settings-layout">
+          <section class="settings-card">
+            <div class="section-heading">
+              <app-icon name="sliders" />
+              <div>
+                <h2>Display preferences</h2>
+                <p>Saved on this browser for your next visit.</p>
+              </div>
+            </div>
+            <div class="preference-row">
+              <span class="preference-icon"><app-icon name="sun" /></span>
+              <div>
+                <h3>Higher contrast</h3>
+                <p>Stronger colors and borders for clearer reading.</p>
+              </div>
+              <button
+                role="switch"
+                [attr.aria-checked]="preferences().contrast"
+                aria-label="Higher contrast"
+                class="toggle"
+                [class.on]="preferences().contrast"
+                (click)="togglePreference('contrast')"
+              >
+                <span></span>
+              </button>
+            </div>
+            <div class="preference-row">
+              <span class="preference-icon"><app-icon name="text" /></span>
+              <div>
+                <h3>Larger text</h3>
+                <p>A little more room for words across the app.</p>
+              </div>
+              <button
+                role="switch"
+                [attr.aria-checked]="preferences().largeText"
+                aria-label="Larger text"
+                class="toggle"
+                [class.on]="preferences().largeText"
+                (click)="togglePreference('largeText')"
+              >
+                <span></span>
+              </button>
+            </div>
+            <div class="preference-row">
+              <span class="preference-icon"><app-icon name="motion" /></span>
+              <div>
+                <h3>Reduce motion</h3>
+                <p>Keep transitions and map movements gentle.</p>
+              </div>
+              <button
+                role="switch"
+                [attr.aria-checked]="preferences().reduceMotion"
+                aria-label="Reduce motion"
+                class="toggle"
+                [class.on]="preferences().reduceMotion"
+                (click)="togglePreference('reduceMotion')"
+              >
+                <span></span>
+              </button>
+            </div>
+            <div class="settings-card-footer">
+              <span
+                >Your system’s reduced-motion preference is also
+                respected.</span
+              ><button class="text-button" (click)="resetPreferences()">
+                Reset
+              </button>
+            </div>
+          </section>
+          <aside class="support-card">
+            <app-icon name="access" />
+            <h2>Access is personal.</h2>
+            <p>
+              Need a step-free entrance, an accessible restroom, or help getting
+              across campus? Mason’s Disability Services can help you plan.
+            </p>
+            <a
+              class="primary-button"
+              href="https://ds.gmu.edu/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Connect with support <app-icon name="external" /></a
+            ><a class="contact-link" href="tel:+17039932474"
+              ><app-icon name="phone" /> 703-993-2474</a
+            >
+          </aside>
+        </div>
+        <div class="information-card">
+          <app-icon name="info" />
+          <div>
+            <h2>Know what the map can tell you</h2>
+            <p>
+              Building pins are approximate locations, not verified accessible
+              entrances. CampusAble does not currently have live elevator
+              outages, construction closures, or a verified accessible routing
+              network. Google Maps walking directions do not guarantee a
+              step-free route.
+            </p>
+            <a
+              href="https://www.gmu.edu/campus-maps"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Check official campus and accessibility maps
+              <app-icon name="external"
+            /></a>
+          </div>
+        </div>
+      </section>
+      <section
+        class="resources-page"
+        [hidden]="activeView() !== 'resources'"
+        aria-labelledby="resources-heading"
+      >
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">
+              <span></span> YOU DON’T HAVE TO FIGURE IT OUT ALONE
+            </div>
+            <h1 id="resources-heading">A little help along the way.</h1>
+            <p>Official Mason resources for a more confident campus visit.</p>
+          </div>
+        </div>
+        <div class="resource-grid">
+          <a
+            class="resource-card"
+            href="https://ds.gmu.edu/"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><span class="resource-icon"><app-icon name="access" /></span
+            ><span class="eyebrow">PERSONAL SUPPORT</span>
+            <h2>Disability Services</h2>
+            <p>
+              Connect with Mason’s team about accommodations, access needs, and
+              campus support.
+            </p>
+            <span class="resource-action"
+              >Find your support <app-icon name="external" /></span></a
+          ><a
+            class="resource-card"
+            href="https://www.gmu.edu/campus-maps"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><span class="resource-icon"><app-icon name="map" /></span
+            ><span class="eyebrow">PLAN YOUR VISIT</span>
+            <h2>Official campus maps</h2>
+            <p>
+              Explore the university’s campus maps and published accessibility
+              information.
+            </p>
+            <span class="resource-action"
+              >Explore the maps <app-icon name="external" /></span></a
+          ><a
+            class="resource-card"
+            href="https://accessibility.gmu.edu/campus-access/accessible-travel-routes-resources/"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><span class="resource-icon"><app-icon name="directions" /></span
+            ><span class="eyebrow">GETTING AROUND</span>
+            <h2>Accessible travel</h2>
+            <p>
+              Find accessible travel resources, including information about
+              Patriot Lift.
+            </p>
+            <span class="resource-action"
+              >Plan your journey <app-icon name="external" /></span></a
+          ><a
+            class="resource-card"
+            href="https://parking.gmu.edu/"
+            target="_blank"
+            rel="noopener noreferrer"
+            ><span class="resource-icon"><app-icon name="pin" /></span
+            ><span class="eyebrow">BEFORE YOU ARRIVE</span>
+            <h2>Parking & transportation</h2>
+            <p>
+              Check Mason’s parking information, shuttle services, and
+              transportation options.
+            </p>
+            <span class="resource-action"
+              >See your options <app-icon name="external" /></span
+          ></a>
+        </div>
+        <div class="report-banner">
+          <div>
+            <h2>Something standing in your way?</h2>
+            <p>
+              Let Mason know about an accessibility barrier so the right team
+              can help.
+            </p>
+          </div>
+          <a
+            class="outline-button"
+            href="https://accessibility.gmu.edu/report-a-barrier/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Report a barrier <app-icon name="external"
+          /></a>
+        </div>
+      </section>
+      <app-closure-panel [building]="selectedBuilding()" [buildings]="buildings()" />
+      <footer class="app-footer">
+        <span
+          ><app-icon name="heart" /> Built for a campus where everyone
+          belongs.</span
+        ><span
+          >CampusAble <span class="footer-separator">/</span> IT 390 · Team 3</span
+        >
+      </footer>
+    </main>
+  </div>
+</div>
+<dialog
+  #placeDialog
+  class="place-dialog"
+  aria-labelledby="dialog-heading"
+  (click)="onBackdrop($event)"
+>
+  <div class="dialog-inner">
+    @if (selectedBuilding(); as place) {
+      <button
+        class="icon-button dialog-close"
+        aria-label="Close dialog"
+        (click)="closeDialog()"
+      >
+        <app-icon name="close" /></button
+      ><span class="dialog-icon"
+        ><app-icon
+          [name]="
+            dialogType() === 'directions'
+              ? 'directions'
+              : categoryIcon(place.category)
+          " /></span
+      ><span class="eyebrow">{{
+        dialogType() === "directions" ? "PLAN YOUR JOURNEY" : campus().label
+      }}</span>
+      <h2 id="dialog-heading">
+        {{
+          dialogType() === "directions" ? "Let’s get you there." : place.name
+        }}
+      </h2>
+      @if (dialogType() === "details") {
+        <span class="category-label">{{ place.category }}</span>
+        <p class="dialog-description">{{ place.description }}</p>
+        <h3>What you’ll find</h3>
+        <p>{{ place.features }}</p>
+        <div class="detail-access">
+          <app-icon name="info" />
+          <div>
+            <strong>Access details need verification</strong>
+            <p>
+              Step-free entrances, elevators, and accessible restrooms have not
+              been verified for this building.
+            </p>
+            <a
+              href="https://accessibility.gmu.edu/campus-access/accessible-travel-routes-resources/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Check Mason’s access resources <app-icon name="external"
+            /></a>
+          </div>
+        </div>
+        <a
+          class="source-link"
+          [href]="place.sourceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Building information: {{ place.sourceLabel }}
+          <app-icon name="external"
+        /></a>
+        <div class="dialog-actions">
+          <button class="outline-button" (click)="toggleSaved(place)">
+            <app-icon name="bookmark" />
+            {{ isSaved(place) ? "Saved place" : "Save place" }}</button
+          ><button class="primary-button" (click)="openDirections(place)">
+            Get directions <app-icon name="arrow" />
+          </button>
+        </div>
+      } @else {
+        <p class="dialog-description">
+          Walking directions to {{ place.name }}.
+        </p>
+        <div class="route-form">
+          <label for="origin">Starting point</label>
+          <div class="route-input">
+            <app-icon name="locate" /><select
+              id="origin"
+              [value]="origin()"
+              (change)="changeOrigin($any($event.target).value)"
+            >
+              <option value="">Choose a start in Google Maps</option>
+              <option value="location">My current location</option>
+              @for (start of campusBuildings(); track start.id) {
+                @if (start.id !== place.id) {
+                  <option [value]="start.id">{{ start.name }}</option>
+                }
+              }
+            </select>
+          </div>
+          <label for="destination">Destination</label>
+          <div class="route-input destination">
+            <app-icon name="pin" /><input
+              id="destination"
+              [value]="place.name"
+              readonly
+            />
+          </div>
+        </div>
+        @if (locating()) {
+          <p role="status">Finding your location…</p>
+        }
+        @if (routeError()) {
+          <p class="inline-error" role="alert">{{ routeError() }}</p>
+        }
+        <div class="detail-access">
+          <app-icon name="info" />
+          <div>
+            <strong>Check access before you go</strong>
+            <p>
+              These are general walking directions. Google Maps does not
+              guarantee a step-free route. Confirm your access needs with Mason
+              before traveling.
+            </p>
+          </div>
+        </div>
+        @if (routeIsValid()) {
+          <a
+            class="primary-button full-width"
+            [href]="directionLink()"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Open walking directions <app-icon name="external"
+          /></a>
+        } @else {
+          <button class="primary-button full-width" disabled>
+            Choose an available starting point
+          </button>
+        }
+        <p class="route-footnote">Opens Google Maps in a new tab.</p>
+      }
+    }
+  </div>
+</dialog>
+<div class="toast-container" aria-live="polite" aria-atomic="true">
+  @if (toast()) {
+    <div class="toast">
+      <app-icon name="check" /><span>{{ toast() }}</span
+      ><button
+        class="icon-button"
+        aria-label="Dismiss notification"
+        (click)="toast.set('')"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+  }
+</div>

@@ -4,3 +4,6 @@ dist/
 out-tsc/
 .DS_Store
 *.log
+
+.env
+.data/
