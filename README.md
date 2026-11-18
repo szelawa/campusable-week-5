@@ -34,7 +34,7 @@ The server supports a local JSON store and Firestore. Firestore uses one transac
 
 ## Google Cloud deployment
 
-This branch is not deployed. Create a Firestore Native mode database and give the runtime service account the database access it needs. Set GOOGLE_CLIENT_ID and ADMIN_EMAILS in app.yaml alongside STORAGE=firestore. Add the exact public HTTPS origin to the Google OAuth client, then deploy with `gcloud app deploy`. The server refuses local-file storage on App Engine or Cloud Run. No credential keys belong in this repository.
+The CampusAble service has been deployed at https://campusable-dot-project-c4125a8b-a148-4d17-b29.uk.r.appspot.com/. Deployment-specific Google client ID and admin emails are configured in the uploaded app.yaml; set those values before redeploying from this checkout. Create a Firestore Native mode database and give the runtime service account the database access it needs. Set GOOGLE_CLIENT_ID and ADMIN_EMAILS in app.yaml alongside STORAGE=firestore. Add the exact public HTTPS origin to the Google OAuth client, then deploy with `gcloud app deploy`. The server refuses local-file storage on App Engine or Cloud Run. No credential keys belong in this repository.
 
 The existing map uses Gio's MapTiler configuration. Check that its key permits the deployment domain. Directions open Google Maps; this app does not calculate verified accessible routes.
 
@@ -46,4 +46,4 @@ The former GitHub Pages workflow is retained under `.github/previous-workflows` 
 
 ## Current verification limits
 
-The local API tests and production build pass. Browser report submission and the Google sign-in button were checked. Real admin sign-in and Firestore persistence have not yet been verified in this branch. Dependency auditing reports inherited Angular tooling issues and transitive Zod/UUID advisories; resolve or assess these before public deployment.
+The local API tests and production build pass. Browser report submission and the Google sign-in button were checked. The user verified local admin sign-in, publishing and clearing notices, and subsequently published a notice through the deployed Firestore-backed app. The final signed-out cross-browser clearing check is not yet explicitly confirmed. Dependency auditing reports inherited Angular tooling issues and transitive Zod/UUID advisories; resolve or assess these before public deployment.
