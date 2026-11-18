@@ -4,3 +4,7 @@ dist/
 out-tsc/
 .DS_Store
 *.log
+
+# Backend secrets and saved closures
+server/.env
+server/data/closures.json

@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "start": "ng serve --host 127.0.0.1 --poll 1000",
-    "build": "ng build"
+    "build": "ng build",
+    "server": "node server/server.js",
+    "test:server": "node --test server/server.test.js"
   },
   "dependencies": {
     "@angular/common": "22.2.1",

@@ -28,6 +28,7 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": { "proxyConfig": "proxy.conf.json" },
           "configurations": {
             "development": { "buildTarget": "campusable:build:development" }
           },
