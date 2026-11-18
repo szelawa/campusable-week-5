@@ -64,10 +64,7 @@
       </button>
     </div>
     <div class="sidebar-bottom">
-      <img class="gmu-logo"
-      src="assets/gmu-logo.png"
-      alt="George Mason University"
-    />
+      <strong>George Mason University</strong>
   <small>An independent student project</small>
   </div>
   </aside>
@@ -630,6 +627,7 @@
           /></a>
         </div>
       </section>
+      <app-closure-panel [building]="selectedBuilding()" [buildings]="buildings()" />
       <footer class="app-footer">
         <span
           ><app-icon name="heart" /> Built for a campus where everyone

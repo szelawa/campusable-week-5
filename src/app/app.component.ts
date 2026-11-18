@@ -1,114 +1,443 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  NgZone,
+  OnDestroy,
+  ViewChild,
+  computed,
+  effect,
+  inject,
+  signal,
+} from "@angular/core";
+import { ClosurePanelComponent } from "./closure-panel.component";
+import * as L from "leaflet";
+import { IconComponent } from "./icon.component";
+import {
+  BUILDINGS,
+  CAMPUSES,
+  Building,
+  CampusId,
+  Category,
+} from "./campus-data";
+import { directionsUrl, filterBuildings, readSavedIds } from "./campus-utils";
 
-interface Building {
-  id: number;
-  name: string;
-  description: string;
-  features: string;
-  sourceUrl: string;
-  sourceLabel: string;
-  mapUrl: string;
-  embedUrl: string;
-}
+type View = "explore" | "saved" | "accessibility" | "resources";
+type Preferences = {
+  contrast: boolean;
+  largeText: boolean;
+  reduceMotion: boolean;
+};
 
 @Component({
-  selector: 'app-root',
+  selector: "app-root",
   standalone: true,
-  template: `
-    <header>
-      <h1>CampusAble</h1>
-      <p>George Mason University · Fairfax campus</p>
-    </header>
-    <main>
-      <h2>Find building information</h2>
-      <p>Select a building to see its details and location on Google Maps.</p>
-      <div class="master-detail">
-        <section class="building-list" aria-labelledby="buildings-heading">
-          <h3 id="buildings-heading">Campus buildings</h3>
-          <ul>
-            @for (building of buildings; track building.id) {
-              <li>
-                <button type="button"
-                  [class.selected]="selectedBuilding().id === building.id"
-                  [attr.aria-pressed]="selectedBuilding().id === building.id"
-                  aria-controls="building-details campus-map"
-                  (click)="selectBuilding(building)">
-                  {{ building.name }}
-                </button>
-              </li>
-            }
-          </ul>
-        </section>
-        <section id="building-details" class="details" aria-live="polite" aria-atomic="true" aria-labelledby="details-heading">
-          <h3 id="details-heading">{{ selectedBuilding().name }}</h3>
-          <p>{{ selectedBuilding().description }}</p>
-          <p><strong>What you can find here:</strong> {{ selectedBuilding().features }}</p>
-          <p class="source">Building information: <a [href]="selectedBuilding().sourceUrl" target="_blank" rel="noopener noreferrer">{{ selectedBuilding().sourceLabel }} (opens a new tab)</a></p>
-          <div class="notice">
-            <h4>Accessibility information</h4>
-            <p>Entrance, elevator, and accessible restroom details are not yet verified. Live closure updates are not connected.</p>
-          </div>
-        </section>
-      </div>
-      <section id="campus-map" class="map-section" aria-labelledby="map-heading">
-        <div class="map-heading">
-          <h3 id="map-heading">Map · {{ selectedBuilding().name }}</h3>
-          <a [href]="selectedBuilding().mapUrl" target="_blank" rel="noopener noreferrer">Open in Google Maps (new tab)</a>
-        </div>
-        <iframe [src]="mapSource()" [title]="'Google Maps location of ' + selectedBuilding().name"
-          width="960" height="340" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-      </section>
-    </main>
-    <footer>CampusAble | IT 390 | Sufyan Zelawar</footer>
-  `
+  imports: [IconComponent, ClosurePanelComponent],
+  templateUrl: "./app.component.html",
 })
-export class AppComponent {
-  readonly buildings: Building[] = [
-    {
-      id: 1, name: 'Innovation Hall',
-      description: 'An academic building with classrooms and spaces for group learning on the Fairfax campus.',
-      features: 'Teaching spaces and an ITS computer lab in Room 301.',
-      sourceUrl: 'https://its.gmu.edu/help-support/computer-labs-classrooms-information/',
-      sourceLabel: 'Mason ITS computer labs',
-      mapUrl: 'https://www.google.com/maps/search/?api=1&query=Innovation+Hall+George+Mason+University+Fairfax',
-      embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3108.173814132037!2d-77.30747079999999!3d38.82848!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89b64e60c9822067%3A0xd8ebbbeb00c2e454!2sInnovation%20Hall!5e0!3m2!1sen!2sus!4v1793335483243!5m2!1sen!2sus'
-    },
-    {
-      id: 2, name: 'Johnson Center (JC)',
-      description: 'A central place for students to eat, study, meet friends, and attend events between classes.',
-      features: 'Dining options, study rooms, lounges, and event spaces.',
-      sourceUrl: 'https://studentcenters.gmu.edu/the-johnson-center/',
-      sourceLabel: 'Mason Student Centers',
-      mapUrl: 'https://www.google.com/maps/search/?api=1&query=Johnson+Center+George+Mason+University+Fairfax',
-      embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3108.1147183463754!2d-77.30734079999999!3d38.82983349999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89b64f49a1a1542d%3A0xa6e4f7c1cc8c47f6!2sJohnson%20Center!5e0!3m2!1sen!2sus!4v1793335526875!5m2!1sen!2sus'
-    },
-    {
-      id: 3, name: 'Horizon Hall',
-      description: 'An academic building with active learning classrooms designed for discussion and group work.',
-      features: 'Classrooms with flexible learning spaces and technology for collaborative activities.',
-      sourceUrl: 'https://learningenvironments.gmu.edu/signature-learning-spaces/',
-      sourceLabel: 'Mason Learning Environments',
-      mapUrl: 'https://www.google.com/maps/search/?api=1&query=Horizon+Hall+George+Mason+University+Fairfax',
-      embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3108.0524159314573!2d-77.3076116!3d38.8312604!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89b64f94d152886d%3A0x926da2556950cf3a!2sHorizon%20Hall!5e0!3m2!1sen!2sus!4v1793335565904!5m2!1sen!2sus'
-    },
-    {
-      id: 4, name: 'Fenwick Library',
-      description: 'George Mason’s main research library, with study spaces, library collections, and research support.',
-      features: 'Group study rooms, the Research Commons, and the Special Collections Research Center.',
-      sourceUrl: 'https://library.gmu.edu/locations/fenwick',
-      sourceLabel: 'Mason University Libraries',
-      mapUrl: 'https://www.google.com/maps/search/?api=1&query=Fenwick+Library+George+Mason+University+Fairfax',
-      embedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3108.0147296539417!2d-77.30714379999999!3d38.8321235!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89b64e5de5e701f3%3A0x7bbc5c6b065f984a!2sFenwick%20Library!5e0!3m2!1sen!2sus!4v1793335605049!5m2!1sen!2sus'
-    }
+export class AppComponent implements AfterViewInit, OnDestroy {
+  @ViewChild("mapElement") mapElement!: ElementRef<HTMLDivElement>;
+  @ViewChild("placeDialog") placeDialog!: ElementRef<HTMLDialogElement>;
+  readonly buildings = signal<Building[]>(BUILDINGS);
+  readonly campuses = CAMPUSES;
+  readonly categories: Category[] = [
+    "All places",
+    "Academic",
+    "Libraries",
+    "Student life",
   ];
-  readonly selectedBuilding = signal<Building>(this.buildings[0]);
-  private readonly sanitizer = inject(DomSanitizer);
-  // Only the fixed Google Maps embed URLs above are trusted as iframe sources.
-  readonly mapSource = computed(() =>
-    this.sanitizer.bypassSecurityTrustResourceUrl(this.selectedBuilding().embedUrl)
+  readonly activeView = signal<View>("explore");
+  readonly campusId = signal<CampusId>("fairfax");
+  readonly campus = computed(
+    () => CAMPUSES.find((c) => c.id === this.campusId())!,
   );
-  selectBuilding(building: Building): void {
-    this.selectedBuilding.set(building);
+  readonly campusBuildings = computed(() =>
+    this.buildings().filter((b) => b.campusId === this.campusId()),
+  );
+  readonly query = signal("");
+  readonly category = signal<Category>("All places");
+  readonly selectedBuilding = signal<Building | undefined>(BUILDINGS[1]);
+  readonly savedIds = signal(
+    readSavedIds(this.readStorage("campusable-saved"), BUILDINGS),
+  );
+  readonly filteredBuildings = computed(() =>
+    filterBuildings(
+      this.buildings(),
+      this.campusId(),
+      this.query(),
+      this.category(),
+      this.activeView() === "saved" ? this.savedIds() : undefined,
+    ),
+  );
+  readonly preferences = signal<Preferences>(this.loadPreferences());
+  readonly listView = signal(false);
+  readonly mobileMenu = signal(false);
+  readonly toast = signal("");
+  readonly tileError = signal(false);
+  readonly locating = signal(false);
+  readonly dialogType = signal<"details" | "directions">("details");
+  readonly origin = signal("");
+  readonly userLocation = signal<[number, number] | undefined>(undefined);
+  readonly routeError = signal("");
+  readonly directionLink = computed(() => {
+    const destination = this.selectedBuilding();
+    if (!destination) return "";
+    const start =
+      this.origin() === "location"
+        ? this.userLocation()
+        : this.buildings().find((p) => String(p.id) === this.origin());
+    return directionsUrl(destination, start);
+  });
+  private map?: L.Map;
+  private markers?: L.LayerGroup;
+  private locationMarker?: L.CircleMarker;
+  private resizeObserver?: ResizeObserver;
+  private toastTimeout?: ReturnType<typeof setTimeout>;
+  private readonly zone = inject(NgZone);
+
+  constructor() {
+    fetch("/api/buildings").then(r => { if(!r.ok) throw Error(); return r.json(); }).then((data: Building[]) => {this.buildings.set(data);this.syncSelection();}).catch(() => this.notify("Building server unavailable. Showing the bundled building list; reports and updates may be unavailable."));
+    effect(() => {
+      const places = this.filteredBuildings();
+      const selected = this.selectedBuilding();
+      if (this.map) this.renderMarkers(places, selected);
+    });
+    effect(() => {
+      const prefs = this.preferences();
+      document.documentElement.classList.toggle(
+        "high-contrast",
+        prefs.contrast,
+      );
+      document.documentElement.classList.toggle("large-text", prefs.largeText);
+      document.documentElement.classList.toggle(
+        "reduce-motion",
+        prefs.reduceMotion,
+      );
+    });
+  }
+
+  ngAfterViewInit() {
+    this.map = L.map(this.mapElement.nativeElement, {
+      zoomControl: false,
+      scrollWheelZoom: false,
+      attributionControl: true,
+      minZoom: 5,
+      maxZoom: 19,
+    }).setView(this.campus().center, this.campus().zoom);
+
+    const tiles = L.tileLayer(
+      "https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=MWmEAl1RwbigPH47HYhO",
+      {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> ' +
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+      },
+    ).addTo(this.map);
+
+    tiles.on("tileerror", () => this.zone.run(() => this.tileError.set(true)));
+    tiles.on("tileload", () => this.zone.run(() => this.tileError.set(false)));
+    this.markers = L.layerGroup().addTo(this.map);
+    this.renderMarkers(this.filteredBuildings(), this.selectedBuilding());
+    this.resizeObserver = new ResizeObserver(() => this.map?.invalidateSize());
+    this.resizeObserver.observe(this.mapElement.nativeElement);
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver?.disconnect();
+    this.map?.remove();
+    clearTimeout(this.toastTimeout);
+  }
+
+  private renderMarkers(places: Building[], selected?: Building) {
+    this.markers?.clearLayers();
+    for (const place of places) {
+      const active = selected?.id === place.id;
+      const icon = L.divIcon({
+        className: "campus-marker-wrapper",
+        html: `<span class="campus-marker ${active ? "is-selected" : ""}">${place.code}</span>`,
+        iconSize: [38, 44],
+        iconAnchor: [19, 44],
+      });
+      const marker = L.marker(place.coordinates, {
+        icon,
+        title: place.name,
+        alt: `View ${place.name}`,
+        keyboard: true,
+        zIndexOffset: active ? 1000 : 0,
+      });
+      marker.bindTooltip(place.name, {
+        permanent: active,
+        direction: "right",
+        offset: [17, -26],
+        className: "building-tooltip",
+      });
+      marker.on("click", () =>
+        this.zone.run(() => this.selectBuilding(place, false)),
+      );
+      marker.addTo(this.markers!);
+      marker.getElement()?.setAttribute("aria-label", "View " + place.name);
+    }
+  }
+
+  navigate(view: View) {
+    this.activeView.set(view);
+    this.mobileMenu.set(false);
+    this.query.set("");
+    this.category.set("All places");
+    this.syncSelection();
+    queueMicrotask(() =>
+      document.getElementById("main-content")?.focus({ preventScroll: true }),
+    );
+    if (view === "explore" || view === "saved")
+      setTimeout(() => this.map?.invalidateSize(), 0);
+  }
+
+  @HostListener("document:keydown.escape")
+  closeMobileMenu() {
+    if (!this.mobileMenu()) return;
+    this.mobileMenu.set(false);
+    queueMicrotask(() =>
+      document.querySelector<HTMLButtonElement>(".mobile-menu-button")?.focus(),
+    );
+  }
+  changeCampus(value: string) {
+    if (!CAMPUSES.some((c) => c.id === value)) return;
+    this.campusId.set(value as CampusId);
+    this.query.set("");
+    this.category.set("All places");
+    this.origin.set("");
+    this.selectedBuilding.set(this.filteredBuildings()[0]);
+    this.map?.setView(this.campus().center, this.campus().zoom, {
+      animate: false,
+    });
+  }
+  search(value: string) {
+    this.query.set(value);
+    this.syncSelection();
+  }
+  setCategory(value: Category) {
+    this.category.set(value);
+    this.syncSelection();
+  }
+  clearFilters() {
+    this.query.set("");
+    this.category.set("All places");
+    this.syncSelection();
+  }
+  private syncSelection() {
+    if (
+      !this.filteredBuildings().some(
+        (b) => b.id === this.selectedBuilding()?.id,
+      )
+    )
+      this.selectedBuilding.set(this.filteredBuildings()[0]);
+  }
+  selectBuilding(place: Building, pan = true) {
+    this.selectedBuilding.set(place);
+    if (pan && this.map)
+      this.map.panTo(place.coordinates, { animate: !this.reducedMotion() });
+  }
+  categoryIcon(category: string) {
+    return category === "Libraries"
+      ? "book"
+      : category === "Student life"
+        ? "coffee"
+        : "building";
+  }
+  isSaved(place: Building) {
+    return this.savedIds().includes(place.id);
+  }
+  toggleSaved(place: Building) {
+    const removing = this.isSaved(place);
+    this.savedIds.update((ids) =>
+      removing ? ids.filter((id) => id !== place.id) : [...ids, place.id],
+    );
+    const persisted = this.writeStorage(
+      "campusable-saved",
+      JSON.stringify(this.savedIds()),
+    );
+    this.notify(
+      persisted
+        ? removing
+          ? "Place removed from saved places"
+          : "Place saved for your next visit"
+        : "Updated for this visit. Your browser could not save the change.",
+    );
+    if (this.activeView() === "saved") {
+      if (removing && this.placeDialog?.nativeElement.open) this.closeDialog();
+      this.syncSelection();
+    }
+  }
+  setListView(value: boolean) {
+    this.listView.set(value);
+    setTimeout(() => this.map?.invalidateSize(), 0);
+  }
+  zoom(delta: number) {
+    if (delta > 0) this.map?.zoomIn();
+    else this.map?.zoomOut();
+  }
+  resetMap() {
+    this.map?.setView(this.campus().center, this.campus().zoom, {
+      animate: !this.reducedMotion(),
+    });
+  }
+  retryMap() {
+    this.tileError.set(false);
+    this.map?.eachLayer((layer) => {
+      if (layer instanceof L.TileLayer) layer.redraw();
+    });
+  }
+  locate(forDirections = false) {
+    this.routeError.set("");
+    if (!navigator.geolocation) {
+      this.locationFailure(
+        "Location is unavailable in this browser. Choose a building as your starting point.",
+      );
+      return;
+    }
+    this.locating.set(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) =>
+        this.zone.run(() => {
+          const coordinates: [number, number] = [
+            position.coords.latitude,
+            position.coords.longitude,
+          ];
+          this.userLocation.set(coordinates);
+          this.locating.set(false);
+          if (forDirections) this.origin.set("location");
+          else {
+            this.locationMarker?.remove();
+            this.locationMarker = L.circleMarker(coordinates, {
+              radius: 8,
+              fillColor: "#2265d6",
+              color: "#ffffff",
+              weight: 3,
+              fillOpacity: 1,
+            })
+              .addTo(this.map!)
+              .bindTooltip("Your location");
+            this.map?.setView(coordinates, 17);
+            this.notify(
+              "Showing your location. Use Reset view to return to campus.",
+            );
+          }
+        }),
+      () =>
+        this.zone.run(() =>
+          this.locationFailure(
+            "Location could not be found. Allow location access or choose a starting building.",
+          ),
+        ),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+    );
+  }
+  private locationFailure(message: string) {
+    this.locating.set(false);
+    this.routeError.set(message);
+    this.notify(message);
+  }
+  openDetails(place: Building) {
+    this.selectedBuilding.set(place);
+    this.dialogType.set("details");
+    this.showDialog();
+  }
+  openDirections(place: Building) {
+    this.selectedBuilding.set(place);
+    this.dialogType.set("directions");
+    this.routeError.set("");
+    this.origin.set("");
+    this.showDialog();
+    queueMicrotask(() =>
+      this.placeDialog.nativeElement
+        .querySelector<HTMLSelectElement>("#origin")
+        ?.focus(),
+    );
+  }
+  private showDialog() {
+    if (!this.placeDialog.nativeElement.open)
+      this.placeDialog.nativeElement.showModal();
+  }
+  closeDialog() {
+    this.placeDialog.nativeElement.close();
+  }
+  onBackdrop(event: MouseEvent) {
+    if (event.target === this.placeDialog.nativeElement) this.closeDialog();
+  }
+  changeOrigin(value: string) {
+    this.origin.set(value);
+    this.routeError.set("");
+    if (value === "location" && !this.userLocation()) this.locate(true);
+  }
+  routeIsValid() {
+    return (
+      this.origin() !== String(this.selectedBuilding()?.id) &&
+      (this.origin() !== "location" || !!this.userLocation())
+    );
+  }
+  togglePreference(key: keyof Preferences) {
+    this.preferences.update((p) => ({ ...p, [key]: !p[key] }));
+    if (
+      !this.writeStorage(
+        "campusable-preferences",
+        JSON.stringify(this.preferences()),
+      )
+    )
+      this.notify(
+        "Preference applied for this visit. Browser storage is unavailable.",
+      );
+  }
+  resetPreferences() {
+    this.preferences.set({
+      contrast: false,
+      largeText: false,
+      reduceMotion: false,
+    });
+    this.writeStorage(
+      "campusable-preferences",
+      JSON.stringify(this.preferences()),
+    );
+  }
+  private reducedMotion() {
+    return (
+      this.preferences().reduceMotion ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+  private readStorage(key: string) {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+  private writeStorage(key: string, value: string) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  private loadPreferences(): Preferences {
+    try {
+      const data = JSON.parse(
+        this.readStorage("campusable-preferences") || "{}",
+      );
+      return {
+        contrast: data?.contrast === true,
+        largeText: data?.largeText === true,
+        reduceMotion: data?.reduceMotion === true,
+      };
+    } catch {
+      return { contrast: false, largeText: false, reduceMotion: false };
+    }
+  }
+  notify(message: string) {
+    clearTimeout(this.toastTimeout);
+    this.toast.set(message);
+    this.toastTimeout = setTimeout(() => this.toast.set(""), 5500);
   }
 }

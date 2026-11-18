@@ -1,47 +1,49 @@
-# CampusAble Fairfax Campus
+# CampusAble — Sprint 2
 
-IT 390 project by Sufyan Zelawar.
-
-The Angular page lists Innovation Hall, the Johnson Center (JC), Horizon Hall, and Fenwick Library. Selecting a building updates its description, useful features, official information link, and embedded Google Maps location.
+Angular frontend based on Gio Pilande's CampusAble redesign, with a Node.js API for reporting and reviewing building issues. All closure notices are demo data, not official university alerts.
 
 ## Run locally
 
-```bash
-npm install
-npm start
-```
+Use Node.js 24 or 26. Run `npm ci`, copy `.env.example` to `.env`, then set the Google web client ID and comma-separated approved admin emails. Run `npm run build` followed by `npm start`. Open http://localhost:8082. Local records are stored in `.data/records.json` (excluded from Git).
 
-Open http://localhost:4200 and keep Terminal running. After the first installation, only `npm start` is needed. Stop the server with Control+C. Use a Node version supported by Angular 22. Do not open src/index.html directly; Angular needs the server to compile the TypeScript.
+For frontend development, run the API with `npm start` and Angular with `npm run dev` in another terminal. Add the frontend origin to Google's authorized JavaScript origins if testing login there.
 
-## Main files
+## Demo
 
-- `src/app/app.component.ts`: building records, HTML template, selection logic, and Google Maps embeds.
-- `src/styles.css`: simple blue theme and layout for desktop and mobile.
-- `src/main.ts`: starts the Angular application.
+1. Select Innovation Hall and scroll to Building updates.
+2. Expand Report an issue, choose Elevator and submit a sample description.
+3. Expand Admin review and sign in with an approved Google account.
+4. Publish the pending report as a demo notice.
+5. Open the same building in another browser. It refreshes notices every ten seconds; Refresh updates also works immediately.
+6. Clear the notice as admin. Check that it disappears in the other browser.
 
-The `selectedBuilding` signal stores the selected record. The computed `mapSource` changes the iframe URL when the selection changes. Embed URLs come from Google Maps' Share > Embed a map feature. This version needs internet access for the maps but does not use an API key. An external Google Maps link remains available if an embed does not load.
+Reports remain private until published. Admin API requests verify Google ID tokens and the server-side email allowlist. Tokens stay in browser memory; reloading requires signing in again. Saved places and display preferences remain browser-local.
 
-## Information sources
+## Backend
 
-Building descriptions were checked on October 30, 2026:
+- GET /api/buildings
+- GET /api/buildings/:id/closures
+- POST /api/reports
+- GET /api/admin/me (admin)
+- GET /api/reports (admin)
+- POST /api/closures with reportId (admin)
+- PATCH /api/reports/:id with status dismissed (admin)
+- PATCH /api/closures/:id with status resolved (admin)
 
-- Innovation Hall: [Mason ITS computer labs](https://its.gmu.edu/help-support/computer-labs-classrooms-information/) and [Mason learning spaces](https://learningenvironments.gmu.edu/signature-learning-spaces/).
-- Johnson Center: [Mason Student Centers](https://studentcenters.gmu.edu/the-johnson-center/).
-- Horizon Hall: [Mason Learning Environments](https://learningenvironments.gmu.edu/signature-learning-spaces/).
-- Fenwick Library: [Mason University Libraries](https://library.gmu.edu/locations/fenwick).
+The server supports a local JSON store and Firestore. Firestore uses one transactional document for the bounded classroom demo; split reports and closures into collections before expanding beyond this prototype. Demo reports are capped at 500. The local request limiter is per process, not a distributed abuse-prevention service.
 
-These sources describe the buildings. They do not verify accessible travel routes. Entrance, elevator, and accessible restroom details remain unverified. The old fictional closure notices were removed. Backend routing, live closures, and administrator updates are not implemented.
+## Google Cloud deployment
 
-## Build and check
+This branch is not deployed. Create a Firestore Native mode database and give the runtime service account the database access it needs. Set GOOGLE_CLIENT_ID and ADMIN_EMAILS in app.yaml alongside STORAGE=firestore. Add the exact public HTTPS origin to the Google OAuth client, then deploy with `gcloud app deploy`. The server refuses local-file storage on App Engine or Cloud Run. No credential keys belong in this repository.
 
-```bash
-npm run build
-```
+The existing map uses Gio's MapTiler configuration. Check that its key permits the deployment domain. Directions open Google Maps; this app does not calculate verified accessible routes.
 
-1. Innovation Hall is selected initially.
-2. Select each of the four buildings. Confirm that its heading, description, source link, map heading, and map location change together.
-3. Select buildings using Tab and Enter.
-4. Check the layout on a narrow screen; the details should appear below the list.
-5. Confirm that the Google Maps and Mason source links open the selected building's information.
+## Checks
 
-Keep node_modules, dist, .angular, and .DS_Store out of the source submission.
+Run `npm test` and `npm run build`. Backend tests use a test-only injected token verifier, not a production authentication bypass. Real Google login and Firestore require separate integration checks.
+
+The former GitHub Pages workflow is retained under `.github/previous-workflows` for reference. Pages alone does not run this backend.
+
+## Current verification limits
+
+The local API tests and production build pass. Browser report submission and the Google sign-in button were checked. Real admin sign-in and Firestore persistence have not yet been verified in this branch. Dependency auditing reports inherited Angular tooling issues and transitive Zod/UUID advisories; resolve or assess these before public deployment.
